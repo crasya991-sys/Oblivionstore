@@ -9,7 +9,7 @@ compatibility_date = "2026-01-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "oblivionstore-db"
-database_id = "877699fd-b1ab-49c6-b58f-49fa88d8c749"
+database_id = "f60596c9-793b-4b0d-9e0e-f9be557c4453"
 
 # Frontend (React/Vite) dideploy terpisah ke Cloudflare Pages:
 #   npm run build && npx wrangler pages deploy dist --project-name=oblivionstore
