@@ -1,0 +1,24 @@
+name = "oblivionstore-api"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+# Secret wajib diset setelah deploy:
+#   npx wrangler secret put ADMIN_PASSWORD
+# (password admin, default untuk dev: oblivionstore123)
+
+[[d1_databases]]
+binding = "DB"
+database_name = "oblivionstore-db"
+database_id = "GANTI_DENGAN_DATABASE_ID_ANDA"
+
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "oblivionstore-files"
+
+# Frontend (React/Vite) dideploy terpisah ke Cloudflare Pages:
+#   npm run build && npx wrangler pages deploy dist --project-name=oblivionstore
+# Lalu set URL frontend di vars di bawah agar CORS benar.
+
+[vars]
+FRONTEND_URL = "https://oblivionstore.pages.dev"
+CHECKOUT_TTL_MINUTES = "15"
