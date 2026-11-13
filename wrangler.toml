@@ -10,7 +10,7 @@ DEFAULT_QRIS_IMAGE = "https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_cod
 [[d1_databases]]
 binding = "DB"
 database_name = "oblivionstore-db"
-database_id = "GANTI_DENGAN_DATABASE_ID_D1_ANDA"
+database_id = "f60596c9-793b-4b0d-9e0e-f9be557c4453"
 
 # Opsional: Aktifkan bagian R2 di bawah ini jika sudah mengaktifkan R2 Storage
 # Jika belum memakai R2, biarkan terkomentar (#) dan gunakan URL File / URL Gambar eksternal di Admin Panel.
