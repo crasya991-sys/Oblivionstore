@@ -1,88 +1,36 @@
-# OblivionStore — Deploy Gratis ke Cloudflare (Pages + Workers + D1 + R2)
+# OblivionStore — Full-Stack Webstore (Cloudflare Workers + D1 + R2 + Pages)
 
-Paket ini adalah implementasi backend **Cloudflare Worker** yang setara dengan versi Kimi
-platform yang sudah jalan, sehingga frontend yang sama bisa di-deploy ke Cloudflare Pages
-100% gratis (tanpa VPS, tanpa Midtrans/Xendit, tanpa KTP).
+**Tagline:** Toko pilihan untuk kebutuhan game
 
-## Arsitektur
+## Struktur Paket File
+- `backend/schema.sql` — Skema database Cloudflare D1 (`products`, `discounts`, `portfolio`, `testimonials`, `transactions`) + data contoh awal.
+- `backend/wrangler.toml` — Konfigurasi Worker, D1 Database, dan R2 Storage.
+- `backend/src/index.js` — Kode lengkap REST API Backend, Checkout QRIS, Webhook Pembayaran Otomatis, dan Admin API.
+- `frontend/index.html` — Tampilan penuh *dark-mode obsidian* siap deploy ke Cloudflare Pages.
 
-| Komponen | Layanan Cloudflare | Fungsi |
-|---|---|---|
-| Frontend | Cloudflare Pages | React/Vite build (`dist/`) |
-| Backend API | Cloudflare Workers | Auth admin, CRUD, checkout, webhook, proteksi unduhan |
-| Database | Cloudflare D1 (SQLite) | `products`, `discounts`, `portfolio`, `testimonials`, `transactions`, `settings` |
-| File storage | Cloudflare R2 | File produk, thumbnail, gambar QRIS, foto testimoni/portofolio |
+## Cara Deploy (100% Lewat Browser / GitHub)
 
-## Langkah Setup
+### 1. Setup Database D1
+1. Buka **Cloudflare Dashboard** > **Storage & Databases** > **D1 SQL Database**.
+2. Pilih database `oblivionstore-db` Anda > buka tab **Console**.
+3. Salin seluruh isi `backend/schema.sql`, tempel ke Console, lalu klik **Execute**.
 
-### 1. Backend (Worker + D1 + R2)
+### 2. Update Backend Worker
+1. Buka `backend/wrangler.toml`, ganti `GANTI_DENGAN_DATABASE_ID_D1_ANDA` dengan Database ID D1 Anda (misal: `f60596c9-793b-4b0d-9e0e-f9be557c4453`).
+2. Unggah isi folder `backend/` (`src/index.js`, `wrangler.toml`, `schema.sql`) ke repository GitHub Worker Anda agar otomatis ter-deploy.
+3. Di menu **Workers & Pages** > `oblivionstore` > **Settings** > **Variables and Secrets**, tambahkan:
+   - `ADMIN_PASSWORD` = `oblivionstore123` (atau ganti dengan password pilihan Anda).
+   - `DEFAULT_QRIS_IMAGE` = URL gambar QRIS Anda (dari Saweria / SociaBuzz / QRIS Personal).
 
-```bash
-cd cloudflare-oblivionstore
+### 3. Deploy Frontend ke Cloudflare Pages
+1. Buka `frontend/index.html`, pastikan baris `const API_BASE_URL = "https://oblivionstore.oblivionstore.workers.dev";` sudah sesuai dengan URL Worker Anda.
+2. Upload folder `frontend/` (berisi `index.html`) ke repository GitHub baru (misal `oblivionstore-web`), atau upload langsung via **Workers & Pages** > **Create** > **Pages** > **Upload assets**.
 
-# Buat database D1
-npx wrangler d1 create oblivionstore-db
-# Salin database_id ke wrangler.toml
-
-# Jalankan skema
-npx wrangler d1 execute oblivionstore-db --file=schema.sql
-
-# Buat bucket R2
-npx wrangler r2 bucket create oblivionstore-files
-
-# Set password admin (SECRET — jangan di-hardcode)
-npx wrangler secret put ADMIN_PASSWORD
-
-# Deploy worker
-npx wrangler deploy
-```
-
-### 2. Frontend (Cloudflare Pages)
-
-```bash
-cd ../app          # proyek React/Vite
-# Di src/lib/api.ts, ganti base URL fetch ("/api/...") menjadi worker URL Anda,
-# mis. "https://oblivionstore-api.<subdomain>.workers.dev/api/..."
-npm run build
-npx wrangler pages deploy dist --project-name=oblivionstore
-```
-
-### 3. QRIS & Pembayaran (tanpa merchant resmi)
-
-Upload gambar **QRIS personal** (GoPay/OVO/DANA/QRIS gabungan) lewat
-**Panel Admin → Pengaturan**. Sistem otomatis menambahkan **kode unik 3 digit**
-(101–199) ke nominal setiap transaksi — itulah kunci verifikasinya.
-
-**Verifikasi otomatis (pilih salah satu):**
-
-1. **Webhook platform kreator** — SociaBuzz / Saweria / Trakteer punya fitur
-   notifikasi webhook. Arahkan ke:
-   `POST https://oblivionstore-api.<sub>.workers.dev/api/webhooks/payment`
-   dengan payload `{ "amount": <nominal masuk> }` dan secret yang sama dengan
-   `webhook_secret` di Pengaturan (dikirim via header `X-Webhook-Secret`).
-   Worker mencocokkan nominal dengan transaksi `pending` yang masih berlaku.
-2. **Notifikasi HP (MacroDroid/Tasker)** — buat trigger "SMS/notifikasi mutasi
-   e-wallet masuk", lalu HTTP POST ke endpoint webhook di atas.
-3. **Konfirmasi manual** — di **Panel Admin → Transaksi**, tekan
-   *Konfirmasi Bayar* setelah mengecek kode unik di mutasi rekening.
-
-### 4. Admin
-
-- Buka situs → klik ikon **gear (⚙️)** kanan bawah → login.
-- Password default untuk development: `oblivionstore123`.
-  **Wajib ganti** via `npx wrangler secret put ADMIN_PASSWORD`.
-
-## Endpoint Utama
-
-| Method | Path | Keterangan |
-|---|---|---|
-| GET | `/api/products?category=&sub=` | Katalog + harga efektif (diskon) |
-| POST | `/api/checkout` | Buat sesi pembayaran (nominal unik) |
-| GET | `/api/transactions/:id/status` | Polling status |
-| POST | `/api/webhooks/payment` | Webhook SociaBuzz/Saweria/Trakteer/MacroDroid |
-| GET | `/api/download/:token` | Unduh file berbayar (token sementara) |
-| POST | `/api/free-download` | Tautan unduh produk gratis |
-| POST | `/api/auth/login` | Login admin (password dari secret) |
-| * | `/api/admin/*` | CRUD produk, diskon, portofolio, testimoni, transaksi, pengaturan |
-
-Aturan portofolio: tambah hanya sekali (HTTP 409 bila sudah ada), edit tetap bebas.
+### 4. Menghubungkan Pembayaran QRIS Otomatis (Non-KTP)
+- **Via Saweria / SociaBuzz / Trakteer:**
+  1. Pasang gambar QRIS halaman dukungan Anda sebagai `DEFAULT_QRIS_IMAGE` (atau pada tiap produk di Admin Panel).
+  2. Masuk ke pengaturan **Webhook / Integration** di dashboard Saweria/SociaBuzz Anda, lalu masukkan URL Webhook Worker:
+     `https://oblivionstore.oblivionstore.workers.dev/api/webhook/payment`
+  3. Setiap kali pembeli melakukan scan QRIS dan transfer sesuai nominal unik, webhook otomatis menandai transaksi `PAID` dan memunculkan tombol download di layar pembeli.
+- **Via QRIS Personal + MacroDroid (HP Android):**
+  Atur MacroDroid di HP untuk meneruskan notifikasi masuk dari aplikasi DANA/GoPay/M-Banking melalui HTTP POST JSON `{"text": "{notifikasi}"}` ke URL webhook di atas.
